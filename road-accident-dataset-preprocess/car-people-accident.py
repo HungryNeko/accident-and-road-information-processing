@@ -13,7 +13,7 @@ import pandas as pd
 from tqdm import tqdm
 
 
-def merge_crash_data(crashes_path, people_path, vehicles_path, output_csv_path):#会清空上次的输出文件！！！
+def merge_crash_data(crashes_path, people_path, vehicles_path, output_csv_path):  # 会清空上次的输出文件！！！
     # 读取车祸数据
     crashes_df = pd.read_csv(crashes_path)
     # 提取 CRASH_RECORD_ID、经纬度和时间
@@ -55,8 +55,12 @@ def merge_crash_data(crashes_path, people_path, vehicles_path, output_csv_path):
             result_data['CRASH_DATE'].append(row['CRASH_DATE'])
             result_data['NUM_PEOPLE'].append(num_people.get(crash_record_id, 0))
             result_data['NUM_VEHICLES'].append(num_vehicles.get(crash_record_id, 0))
-            result_data['INJURY_CLASSIFICATION'].append(get_data("../datasets/Traffic_Crashes_-_People.csv",crash_record_id,'INJURY_CLASSIFICATION'))
-            result_data['AIRBAG_DEPLOYED'].append(get_data("../datasets/Traffic_Crashes_-_People.csv",crash_record_id,'CRASH_RECORD_ID')),
+            data1, data2 = get_data(crash_record_id)
+            result_data['INJURY_CLASSIFICATION'].append(data1)
+            result_data['AIRBAG_DEPLOYED'].append(data2),
+            # if data1!='' and data2!='':
+            #     print("", end='')
+            #     print(data1, data2,end='')
             pbar.update(1)
 
     # 清空之前的输出文件
@@ -67,30 +71,37 @@ def merge_crash_data(crashes_path, people_path, vehicles_path, output_csv_path):
     result_df = pd.DataFrame(result_data)
     result_df.to_csv(output_csv_path, index=False)
 
-def get_data(file_path, crash_record_id,tag):
-    # 初始化列表来存储 'AIRBAG_DEPLOYED' 数据
-    data = []
 
-    # 打开 CSV 文件
-    # with open(file_path, 'r') as file:
-    #     # 创建一个 CSV reader
-    #     reader = csv.DictReader(file)
+def get_data(crash_record_id):
+    datas1 = ''
+    datas2 = ''
+    try:
 
-        # 遍历 CSV 中的每一行
-    for row in reader:
-        # 如果 'CRASH_RECORD_ID' 与提供的 id 匹配
-        if row['CRASH_RECORD_ID'] == crash_record_id:
-            # 将 'AIRBAG_DEPLOYED' 数据添加到列表中
-            data.append(row[tag])
+        for i in data_INJURY_CLASSIFICATION[crash_record_id]:
+            datas1 = i + "|"
+        for i in data_AIRBAG_DEPLOYED[crash_record_id]:
+            datas2 = i + "|"
+    except Exception as e:
+        pass
+    return datas1, datas2
 
-    # 使用 '|' 连接 'AIRBAG_DEPLOYED' 数据并返回结果
-    return '|'.join(data)
 
-# 示例用法
+
 if __name__ == "__main__":
 
-        # 创建一个 CSV reader
+    # 创建一个 CSV reader
     reader = csv.DictReader(open("../datasets/Traffic_Crashes_-_People.csv", 'r'))
+    data_INJURY_CLASSIFICATION = {}
+    data_AIRBAG_DEPLOYED = {}
+    for row in reader:
+        if row['CRASH_RECORD_ID'] not in data_INJURY_CLASSIFICATION:
+            data_INJURY_CLASSIFICATION[row['CRASH_RECORD_ID']] = []
+        if row['CRASH_RECORD_ID'] not in data_AIRBAG_DEPLOYED:
+            data_AIRBAG_DEPLOYED[row['CRASH_RECORD_ID']] = []
+        data_INJURY_CLASSIFICATION[row['CRASH_RECORD_ID']].append(row['INJURY_CLASSIFICATION'])
+        data_AIRBAG_DEPLOYED[row['CRASH_RECORD_ID']].append(row['AIRBAG_DEPLOYED'])
+
+
     merge_crash_data("../datasets/Traffic_Crashes_-_Crashes_20240313.csv",
                      "../datasets/Traffic_Crashes_-_People.csv",
                      "../datasets/Traffic_Crashes_-_Vehicles.csv",
