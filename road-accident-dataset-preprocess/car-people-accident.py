@@ -41,6 +41,12 @@ def merge_crash_data(crashes_path, people_path, vehicles_path, output_csv_path):
 
     # 合并数据
     total_records = len(crashes_df)
+    save_interval = 2000  # 设置存储间隔为2000个数据
+    num_saved = 0  # 记录已存储的数据数量
+    # 清空之前的输出文件
+    if os.path.exists(output_csv_path):
+        os.remove(output_csv_path)
+
     with tqdm(total=total_records, desc="Processing") as pbar:
         for index, row in crashes_df.iterrows():
             crash_record_id = row['CRASH_RECORD_ID']
@@ -57,20 +63,29 @@ def merge_crash_data(crashes_path, people_path, vehicles_path, output_csv_path):
             result_data['NUM_VEHICLES'].append(num_vehicles.get(crash_record_id, 0))
             data1, data2 = get_data(crash_record_id)
             result_data['INJURY_CLASSIFICATION'].append(data1)
-            result_data['AIRBAG_DEPLOYED'].append(data2),
-            # if data1!='' and data2!='':
-            #     print("", end='')
-            #     print(data1, data2,end='')
+            result_data['AIRBAG_DEPLOYED'].append(data2)
             pbar.update(1)
 
-    # 清空之前的输出文件
-    if os.path.exists(output_csv_path):
-        os.remove(output_csv_path)
+            # 每当达到存储间隔时，保存结果并清空结果字典，减少内存消耗
+            if (index + 1) % save_interval == 0 or (index + 1) == total_records:
+                save_data_to_csv(result_data, output_csv_path)
+                result_data = {
+                    'CRASH_RECORD_ID': [],
+                    'LATITUDE': [],
+                    'LONGITUDE': [],
+                    'CRASH_DATE': [],
+                    'NUM_PEOPLE': [],
+                    'NUM_VEHICLES': [],
+                    'INJURY_CLASSIFICATION': [],
+                    'AIRBAG_DEPLOYED': []
+                }
 
-    # 将结果保存到 CSV 文件中
-    result_df = pd.DataFrame(result_data)
-    result_df.to_csv(output_csv_path, index=False)
 
+
+
+def save_data_to_csv(data, output_csv_path):
+    result_df = pd.DataFrame(data)
+    result_df.to_csv(output_csv_path, index=False, mode='a', header=not os.path.exists(output_csv_path))
 
 def get_data(crash_record_id):
     datas1 = ''
